@@ -55,7 +55,7 @@
         #videoElement {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain; /* Değiştirildi: cover -> contain */
             border-radius: 8px;
             display: none;
         }
@@ -153,16 +153,17 @@
                 </div>
             </div>
             <div class="controls">
-                <form action="/add_user" method="post" style="margin:0;">
-                    <input type="text" name="name" placeholder="User Name" required style="padding:8px; border-radius:4px; border:1px solid #ccc; margin-right:8px;">
-                    <button type="submit">Add User</button>
+                <button type="button" id="startCameraBtn">Start Camera</button>
+                <form action="/recognize" method="post" style="margin:0;display:inline;">
+                    <button type="submit" id="startDetectionBtn">Start Detection</button>
                 </form>
-                <form action="/recognize" method="post" style="margin:0;">
-                    <button type="submit">Start Detection</button>
+                <form action="/add_user" method="post" style="margin:0;display:inline;">
+                    <input type="text" name="name" placeholder="User Name" required style="padding:8px; border-radius:4px; border:1px solid #ccc; margin-left:8px;">
+                    <button type="submit">Add User</button>
                 </form>
             </div>
             <div class="status">
-                <button id="cameraStatusBtn" onclick="toggleCamera(event)">Camera: OFF</button>
+                <span id="cameraStatus">Camera: OFF</span>
                 <span id="detectionStatus">Detection: INACTIVE</span>
             </div>
         </div>
@@ -176,14 +177,19 @@
                 {% endif %}
             </div>
             <div class="panel registered-users">
-                <h2>&#128101; Registered Users <form action="/train" method="post" style="display:inline;"><button class="add-user-btn" type="submit">Train Model</button></form></h2>
+                <h2>&#128101; Registered Users</h2>
+                <form action="/train" method="post" style="margin-bottom:12px;">
+                    <button class="add-user-btn" type="submit">Train Model</button>
+                </form>
                 <ul style="padding-left:18px;">
-                    {% set users = [] %}
-                    {% for user in users %}
-                        <li>{{ user }}</li>
-                    {% endfor %}
+                    {% if users and users|length > 0 %}
+                        {% for user in users %}
+                            <li>{{ user }}</li>
+                        {% endfor %}
+                    {% else %}
+                        <p>No users registered yet.</p>
+                    {% endif %}
                 </ul>
-                <p>No users registered yet.</p>
             </div>
         </div>
     </div>
@@ -193,12 +199,13 @@
     <script>
         let cameraActive = false;
         let stream = null;
-        const cameraBtn = document.getElementById('cameraStatusBtn');
+        const cameraBtn = document.getElementById('startCameraBtn');
         const video = document.getElementById('videoElement');
         const cameraBox = document.getElementById('cameraBox');
         const cameraOff = document.getElementById('cameraOff');
+        const cameraStatus = document.getElementById('cameraStatus');
 
-        function toggleCamera(e) {
+        cameraBtn.addEventListener('click', function(e) {
             e.preventDefault();
             if (!cameraActive) {
                 navigator.mediaDevices.getUserMedia({ video: true })
@@ -208,8 +215,7 @@
                         video.style.display = 'block';
                         cameraBox.classList.add('active');
                         cameraOff.style.display = 'none';
-                        cameraBtn.textContent = 'Camera: ACTIVE';
-                        cameraBtn.classList.add('active');
+                        cameraStatus.textContent = 'Camera: ON';
                         cameraActive = true;
                     })
                     .catch(function(err) {
@@ -222,11 +228,10 @@
                 video.style.display = 'none';
                 cameraBox.classList.remove('active');
                 cameraOff.style.display = 'flex';
-                cameraBtn.textContent = 'Camera: OFF';
-                cameraBtn.classList.remove('active');
+                cameraStatus.textContent = 'Camera: OFF';
                 cameraActive = false;
             }
-        }
+        });
     </script>
 </body>
 </html>

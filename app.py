@@ -12,7 +12,14 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    # Kullanıcı listesini veritabanından çek
+    import sqlite3
+    conn = sqlite3.connect('face_data.db')
+    c = conn.cursor()
+    c.execute('SELECT name FROM users')
+    users = [row[0] for row in c.fetchall()]
+    conn.close()
+    return render_template('index.html', users=users)
 
 @app.route('/add_user', methods=['POST'])
 def add_user():
@@ -27,6 +34,7 @@ def add_user():
         if embedding is not None:
             insert_embedding(user_id, embedding)
     cap.release()
+    # Kullanıcı listesini güncellemek için index'e yönlendirirken users parametresi ile gönder
     return redirect(url_for('index'))
 
 # Veritabanı tablolarını başlatmak için fonksiyonu doğrudan burada çağır
@@ -61,12 +69,26 @@ def recognize():
                     user_name = row[0]
                 conn.close()
     cap.release()
-    return render_template('index.html', recognized=user_name)
+    # Kullanıcı listesini de gönder
+    import sqlite3
+    conn = sqlite3.connect('face_data.db')
+    c = conn.cursor()
+    c.execute('SELECT name FROM users')
+    users = [row[0] for row in c.fetchall()]
+    conn.close()
+    return render_template('index.html', recognized=user_name, users=users)
 
 @app.route('/train', methods=['POST'])
 def train():
     subprocess.run(['python', 'train.py'])
-    return render_template('index.html', trained=True)
+    # Kullanıcı listesini de gönder
+    import sqlite3
+    conn = sqlite3.connect('face_data.db')
+    c = conn.cursor()
+    c.execute('SELECT name FROM users')
+    users = [row[0] for row in c.fetchall()]
+    conn.close()
+    return render_template('index.html', trained=True, users=users)
 
 if __name__ == '__main__':
     app.run(debug=True)
