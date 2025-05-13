@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FaceMatch</title>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: #f5f6fa;
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            display: flex;
+            gap: 32px;
+            justify-content: center;
+        }
+        .panel {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+            padding: 24px;
+            flex: 1;
+            min-width: 340px;
+        }
+        .panel h2 {
+            margin-top: 0;
+            color: #008080;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .live-feed {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+        }
+        .camera-box {
+            background: #e0e1e6;
+            border-radius: 8px;
+            height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+            position: relative;
+        }
+        #videoElement {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+            display: none;
+        }
+        .camera-box.active #videoElement {
+            display: block;
+        }
+        .camera-box .camera-off {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .controls {
+            display: flex;
+            gap: 16px;
+        }
+        .controls button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            background: #008080;
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .controls button:disabled {
+            background: #b2dfdb;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 10px;
+            display: flex;
+            gap: 16px;
+        }
+        .status span, .status button {
+            background: #ececec;
+            border-radius: 4px;
+            padding: 4px 12px;
+            font-size: 0.95rem;
+            border: none;
+            margin-right: 8px;
+        }
+        .status button {
+            cursor: pointer;
+            color: #008080;
+            font-weight: bold;
+        }
+        .status button.active {
+            background: #008080;
+            color: #fff;
+        }
+        .match-result, .registered-users {
+            margin-bottom: 24px;
+        }
+        .match-result p, .registered-users p {
+            color: #888;
+        }
+        .add-user-btn {
+            background: #008080;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 1rem;
+            cursor: pointer;
+            float: right;
+        }
+        .footer {
+            text-align: center;
+            color: #aaa;
+            margin-top: 40px;
+            font-size: 0.95rem;
+        }
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align:center; color:#008080; margin-top:32px; margin-bottom:0;">&#128065; FaceMatch</h1>
+    <p style="text-align:center; color:#888; margin-top:0;">Real-Time Biometric Face Recognition</p>
+    <div class="container">
+        <div class="panel live-feed">
+            <h2>&#128247; Live Feed & Controls</h2>
+            <div class="camera-box" id="cameraBox">
+                <video id="videoElement" autoplay></video>
+                <div class="camera-off" id="cameraOff">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M4 6h16a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z"></path></svg>
+                    <div>Camera is Off</div>
+                </div>
+            </div>
+            <div class="controls">
+                <form action="/add_user" method="post" style="margin:0;">
+                    <input type="text" name="name" placeholder="User Name" required style="padding:8px; border-radius:4px; border:1px solid #ccc; margin-right:8px;">
+                    <button type="submit">Add User</button>
+                </form>
+                <form action="/recognize" method="post" style="margin:0;">
+                    <button type="submit">Start Detection</button>
+                </form>
+            </div>
+            <div class="status">
+                <button id="cameraStatusBtn" onclick="toggleCamera(event)">Camera: OFF</button>
+                <span id="detectionStatus">Detection: INACTIVE</span>
+            </div>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; gap:24px;">
+            <div class="panel match-result">
+                <h2>&#10003; Match Result</h2>
+                {% if recognized %}
+                    <p style="font-weight:bold; color:#008080;">{{ recognized }}</p>
+                {% else %}
+                    <p>Start detection to see results.<br>Ensure users are registered and camera is on.</p>
+                {% endif %}
+            </div>
+            <div class="panel registered-users">
+                <h2>&#128101; Registered Users <form action="/train" method="post" style="display:inline;"><button class="add-user-btn" type="submit">Train Model</button></form></h2>
+                <ul style="padding-left:18px;">
+                    {% set users = [] %}
+                    {% for user in users %}
+                        <li>{{ user }}</li>
+                    {% endfor %}
+                </ul>
+                <p>No users registered yet.</p>
+            </div>
+        </div>
+    </div>
+    <div class="footer">
+        &copy; 2025 FaceMatch App. Powered by GenAI.
+    </div>
+    <script>
+        let cameraActive = false;
+        let stream = null;
+        const cameraBtn = document.getElementById('cameraStatusBtn');
+        const video = document.getElementById('videoElement');
+        const cameraBox = document.getElementById('cameraBox');
+        const cameraOff = document.getElementById('cameraOff');
+
+        function toggleCamera(e) {
+            e.preventDefault();
+            if (!cameraActive) {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(function(s) {
+                        stream = s;
+                        video.srcObject = stream;
+                        video.style.display = 'block';
+                        cameraBox.classList.add('active');
+                        cameraOff.style.display = 'none';
+                        cameraBtn.textContent = 'Camera: ACTIVE';
+                        cameraBtn.classList.add('active');
+                        cameraActive = true;
+                    })
+                    .catch(function(err) {
+                        alert('Camera access denied or not available.');
+                    });
+            } else {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+                video.style.display = 'none';
+                cameraBox.classList.remove('active');
+                cameraOff.style.display = 'flex';
+                cameraBtn.textContent = 'Camera: OFF';
+                cameraBtn.classList.remove('active');
+                cameraActive = false;
+            }
+        }
+    </script>
+</body>
+</html>
